@@ -1,3 +1,4 @@
+// js/projectData.js
 import * as THREE from 'three';
 
 const ProjectData = {
@@ -6,7 +7,7 @@ const ProjectData = {
     selectedNodeIds: new Set(),
     nextNodeId: 1,
     
-    // --- 新增：历史记录栈 ---
+    // 历史记录栈
     historyStack: [],
     currentStateIndex: -1,
 
@@ -15,14 +16,11 @@ const ProjectData = {
         this.selectedNodeIds.clear();
         this.rootNode = null;
         this.nextNodeId = 1;
-        // 初始化时不清除 historyStack，除非显式重置，但为了简单，这里不自动清除
     },
 
-    // --- 新增：保存当前状态快照 ---
     saveState: function() {
         const json = this.toJSON();
         
-        // 如果当前不在历史记录末尾（比如撤销过），则丢弃未来的记录
         if (this.currentStateIndex < this.historyStack.length - 1) {
             this.historyStack = this.historyStack.slice(0, this.currentStateIndex + 1);
         }
@@ -34,12 +32,11 @@ const ProjectData = {
         return this.currentStateIndex;
     },
 
-    // --- 新增：恢复到指定步骤 ---
     restoreState: function(index) {
         if (index < 0 || index >= this.historyStack.length) return false;
         
         const json = this.historyStack[index];
-        this.loadJSON(json, false); // false 表示不清空历史栈
+        this.loadJSON(json, false); 
         this.currentStateIndex = index;
         return true;
     },
@@ -133,9 +130,8 @@ const ProjectData = {
     loadJSON: function(jsonStr, clearHistory = true) {
         try {
             const data = JSON.parse(jsonStr);
-            this.init(); // 清空当前节点 map
+            this.init(); 
             
-            // 如果是导入文件，可能需要清空历史栈
             if (clearHistory) {
                 this.historyStack = [];
                 this.currentStateIndex = -1;

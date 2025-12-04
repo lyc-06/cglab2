@@ -1,7 +1,8 @@
 // js/main.js
-import SceneManager from './view/sceneManager.js';
-import UIManager from './view/uiManager.js';
-import ProjectData from './data/projectData.js';
+// 注意：现在所有文件都在同级目录，所以路径都变成了 ./
+import SceneManager from './sceneManager.js';
+import UIManager from './uiManager.js';
+import ProjectData from './projectData.js';
 
 class App {
     constructor() {

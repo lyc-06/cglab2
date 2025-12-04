@@ -1,6 +1,8 @@
+// js/transformManager.js
 import * as THREE from 'three';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
-import ProjectData from '../data/projectData.js';
+// 路径修正：直接引用同级文件
+import ProjectData from './projectData.js';
 
 export default class TransformManager {
     constructor(scene, camera, canvas) {
@@ -16,12 +18,10 @@ export default class TransformManager {
         this.transformControls = new TransformControls(this.camera, this.canvas);
         this.scene.add(this.transformControls);
         
-        // 监听拖拽状态改变
         this.transformControls.addEventListener('dragging-changed', (event) => {
-            // 禁用轨道控制器（如果存在），防止拖拽物体时旋转相机
             this.camera.controls ? (this.camera.controls.enabled = !event.value) : null;
             
-            // --- 新增：当拖拽结束 (event.value === false) 时保存历史 ---
+            // 拖拽结束保存历史
             if (event.value === false) {
                 console.log("拖拽结束，保存历史");
                 if (window.app && window.app.uiManager) {
@@ -33,7 +33,6 @@ export default class TransformManager {
         this.transformControls.addEventListener('change', () => {
              if (this.ghostMesh && this.currentNodeId) {
                  this.updateNodeTransform(this.currentNodeId, this.ghostMesh.matrix);
-                 // 拖拽过程中实时重绘，但不保存历史（太频繁了）
                  if (window.app && window.app.sceneManager) {
                      window.app.sceneManager.rebuildScene();
                  }

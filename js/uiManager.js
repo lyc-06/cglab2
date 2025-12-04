@@ -1,4 +1,6 @@
-import ProjectData from '../data/projectData.js';
+// js/uiManager.js
+// 路径修正：直接引用同级文件
+import ProjectData from './projectData.js';
 
 export default class UIManager {
     constructor() {
@@ -10,7 +12,6 @@ export default class UIManager {
     init() {
         this.updateTreeView();
         this.bindEvents();
-        // 初始化时保存一个空状态
         this.saveHistoryState(); 
     }
     
@@ -26,14 +27,12 @@ export default class UIManager {
         document.getElementById('importBtn').onclick = () => document.getElementById('fileInput').click();
         document.getElementById('fileInput').onchange = (e) => this.importJSON(e);
 
-        // --- 新增：播放控制 ---
         const slider = document.getElementById('historySlider');
         slider.oninput = (e) => this.onSliderChange(e.target.value);
         
         document.getElementById('playBtn').onclick = () => this.togglePlay();
     }
     
-    // --- 新增：保存历史并更新UI ---
     saveHistoryState() {
         const index = ProjectData.saveState();
         this.updateHistoryUI(index);
@@ -49,16 +48,14 @@ export default class UIManager {
         label.textContent = `${index}/${max}`;
     }
 
-    // --- 新增：进度条拖动 ---
     onSliderChange(val) {
         const index = parseInt(val);
         ProjectData.restoreState(index);
-        this.refreshAll(false); // false 表示不需要再次保存历史
+        this.refreshAll(false); 
         
         document.getElementById('stepLabel').textContent = `${index}/${ProjectData.historyStack.length - 1}`;
     }
 
-    // --- 新增：自动播放 ---
     togglePlay() {
         const btn = document.getElementById('playBtn');
         if (this.isPlaying) {
@@ -69,7 +66,6 @@ export default class UIManager {
             this.isPlaying = true;
             btn.textContent = "⏸";
             
-            // 如果已经在最后，从头开始
             let current = parseInt(document.getElementById('historySlider').value);
             if (current >= ProjectData.historyStack.length - 1) {
                 current = -1;
@@ -78,21 +74,20 @@ export default class UIManager {
             this.playInterval = setInterval(() => {
                 current++;
                 if (current >= ProjectData.historyStack.length) {
-                    this.togglePlay(); // 结束
+                    this.togglePlay(); 
                     return;
                 }
                 
-                // 更新 Slider 和场景
                 document.getElementById('historySlider').value = current;
                 this.onSliderChange(current);
                 
-            }, 500); // 每 500ms 播放一步
+            }, 500); 
         }
     }
     
     addPrimitive(type) {
         const node = type === 'box' ? ProjectData.addBox() : ProjectData.addSphere();
-        this.refreshAll(true); // true = 保存历史
+        this.refreshAll(true); 
     }
     
     doBoolean(opType) {
@@ -140,7 +135,7 @@ export default class UIManager {
             div.onclick = (e) => {
                 e.stopPropagation();
                 ProjectData.toggleSelection(node.id);
-                this.refreshAll(false); // 选中不保存历史
+                this.refreshAll(false); 
                 
                 if (window.app.sceneManager) {
                     window.app.sceneManager.selectNodes(ProjectData.getSelectedNodes());
@@ -182,7 +177,7 @@ export default class UIManager {
         reader.onload = (e) => {
             const success = ProjectData.loadJSON(e.target.result);
             if (success) {
-                this.saveHistoryState(); // 导入后作为新的一步
+                this.saveHistoryState(); 
                 this.refreshAll(false);
                 alert("加载成功！");
             }

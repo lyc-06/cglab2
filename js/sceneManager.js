@@ -1,20 +1,21 @@
+// js/sceneManager.js
 import * as THREE from 'three';
 import { Brush, Evaluator, SUBTRACTION, ADDITION, INTERSECTION } from 'three-bvh-csg';
-import ProjectData from '../data/projectData.js';
-import TransformManager from '../engine/transformManager.js';
+// 路径修正：直接引用同级文件
+import ProjectData from './projectData.js';
+import TransformManager from './transformManager.js';
 
 export default class SceneManager {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
         this.evaluator = new Evaluator();
         
-        // --- 修正 1：优化材质，解决“黑洞”问题 ---
         this.material = new THREE.MeshStandardMaterial({
-            color: 0x2196F3,      // 蓝色
+            color: 0x2196F3,      
             roughness: 0.4,
             metalness: 0.1,
-            flatShading: true,    // 开启平面着色，棱角更分明
-            side: THREE.DoubleSide // 关键：双面渲染，让凹坑内部也能看到颜色！
+            flatShading: true,    
+            side: THREE.DoubleSide 
         });
         
         this.init();
@@ -36,8 +37,7 @@ export default class SceneManager {
         this.renderer.setSize(width, height);
         this.renderer.shadowMap.enabled = true;
         
-        // --- 修正 2：增强光照，照亮凹坑内部 ---
-        // 环境光：基础亮度，防止全黑
+        // 环境光
         const ambientLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6); 
         this.scene.add(ambientLight);
         
@@ -46,12 +46,12 @@ export default class SceneManager {
         dirLight.position.set(10, 10, 10);
         this.scene.add(dirLight);
 
-        // 补光：从另一侧打光，确保背面也有细节
+        // 背光
         const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
         backLight.position.set(-10, -5, -10);
         this.scene.add(backLight);
         
-        // 辅助网格
+        // 辅助工具
         const gridHelper = new THREE.GridHelper(20, 20);
         this.scene.add(gridHelper);
         
