@@ -1,5 +1,4 @@
-// js/uiManager.js
-// 路径修正：直接引用同级文件
+// js/uiManager.js - Lab 2 Version (With Icons)
 import ProjectData from './projectData.js';
 
 export default class UIManager {
@@ -28,7 +27,7 @@ export default class UIManager {
         document.getElementById('fileInput').onchange = (e) => this.importJSON(e);
 
         const slider = document.getElementById('historySlider');
-        slider.oninput = (e) => this.onSliderChange(e.target.value);
+        if(slider) slider.oninput = (e) => this.onSliderChange(e.target.value);
         
         document.getElementById('playBtn').onclick = () => this.togglePlay();
     }
@@ -43,9 +42,13 @@ export default class UIManager {
         const label = document.getElementById('stepLabel');
         const max = ProjectData.historyStack.length - 1;
         
-        slider.max = max;
-        slider.value = index;
-        label.textContent = `${index}/${max}`;
+        if (slider) {
+            slider.max = max;
+            slider.value = index;
+        }
+        if (label) {
+            label.textContent = `${index}/${max}`;
+        }
     }
 
     onSliderChange(val) {
@@ -61,10 +64,10 @@ export default class UIManager {
         if (this.isPlaying) {
             this.isPlaying = false;
             clearInterval(this.playInterval);
-            btn.textContent = "▶";
+            btn.innerHTML = '<i class="fa-solid fa-play"></i>'; // 恢复播放图标
         } else {
             this.isPlaying = true;
-            btn.textContent = "⏸";
+            btn.innerHTML = '<i class="fa-solid fa-pause"></i>'; // 显示暂停图标
             
             let current = parseInt(document.getElementById('historySlider').value);
             if (current >= ProjectData.historyStack.length - 1) {
@@ -86,14 +89,14 @@ export default class UIManager {
     }
     
     addPrimitive(type) {
-        const node = type === 'box' ? ProjectData.addBox() : ProjectData.addSphere();
+        type === 'box' ? ProjectData.addBox() : ProjectData.addSphere();
         this.refreshAll(true); 
     }
     
     doBoolean(opType) {
         const selected = ProjectData.getSelectedNodes();
         if (selected.length !== 2) {
-            alert("请先在树状图中选中两个节点！");
+            alert("Please select exactly two nodes!"); // 稍微改成了英文提示以匹配风格
             return;
         }
         
@@ -118,19 +121,31 @@ export default class UIManager {
     
     updateTreeView() {
         const container = document.getElementById('csgTreeView');
+        if (!container) return;
         container.innerHTML = '';
         
         const renderNode = (node, level) => {
             const div = document.createElement('div');
             div.className = 'tree-node';
-            div.style.marginLeft = (level * 20) + 'px';
+            div.style.marginLeft = (level * 16) + 'px';
             
             if (ProjectData.selectedNodeIds.has(node.id)) {
                 div.classList.add('selected');
             }
             
-            let icon = node.type === 'primitive' ? (node.geometry === 'box' ? '⬜' : '⭕') : '🔧';
-            div.innerHTML = `${icon} ${node.name || node.id}`;
+            // === 使用图标替代 Emoji ===
+            let iconHtml = '';
+            if (node.type === 'primitive') {
+                if (node.geometry === 'box') {
+                    iconHtml = '<i class="fa-solid fa-cube"></i>';
+                } else {
+                    iconHtml = '<i class="fa-solid fa-circle"></i>';
+                }
+            } else {
+                iconHtml = '<i class="fa-solid fa-layer-group"></i>';
+            }
+            
+            div.innerHTML = `${iconHtml} <span>${node.name || node.id}</span>`;
             
             div.onclick = (e) => {
                 e.stopPropagation();
@@ -141,8 +156,11 @@ export default class UIManager {
                     window.app.sceneManager.selectNodes(ProjectData.getSelectedNodes());
                 }
                 
-                document.getElementById('statusInfo').textContent = 
-                    `选中: ${ProjectData.getSelectedNodes().map(n=>n.name).join(', ')}`;
+                const status = document.getElementById('statusInfo');
+                if (status) {
+                    const names = ProjectData.getSelectedNodes().map(n=>n.name).join(', ');
+                    status.textContent = names ? `Selected: ${names}` : 'No selection';
+                }
             };
             
             container.appendChild(div);
@@ -179,7 +197,7 @@ export default class UIManager {
             if (success) {
                 this.saveHistoryState(); 
                 this.refreshAll(false);
-                alert("加载成功！");
+                alert("Import successful!");
             }
         };
         reader.readAsText(file);
