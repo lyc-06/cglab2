@@ -1,5 +1,5 @@
 // js/projectData.js
-import * as THREE from './three.module.js';
+import * as THREE from 'three';
 
 const ProjectData = {
     rootNode: null,

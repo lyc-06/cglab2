@@ -1,114 +1,169 @@
 // js/CommandParser.js
-import * as THREE from './three.module.js';
-import ProjectData from './projectData.js';
 
+/**
+ * 实验3核心模块：基于规则的自然语言指令解析器
+ * 职责：将自然语言字符串转换为标准的 CommandObject
+ */
 export default class CommandParser {
     constructor() {
-        this.commands = {
-            'add': 'CREATE',
-            'create': 'CREATE',
-            'subtract': 'SUBTRACT',
-            'cut': 'SUBTRACT',      // 支持自然语言 "cut"
-            'union': 'UNION',
-            'join': 'UNION',
-            'intersect': 'INTERSECT'
+        // 定义词汇表（白名单）
+        this.vocabulary = {
+            actions: {
+                create: ['add', 'create', 'make', 'new'],
+                boolean: ['subtract', 'cut', 'remove', 'union', 'combine', 'intersect']
+            },
+            shapes: {
+                box: ['box', 'cube', 'square'],
+                sphere: ['sphere', 'ball', 'circle']
+            },
+            keywords: {
+                size: ['size', 'width', 'height', 'depth'], // Box 参数
+                radius: ['radius', 'r'],                    // Sphere 参数
+                position: ['at', 'position', 'pos', 'loc']  // 位置参数
+            }
         };
     }
 
+    /**
+     * 主解析函数
+     * @param {string} input - 用户输入的原始字符串
+     * @returns {Object} result - 解析结果 { success: boolean, command: Object, error: string }
+     */
     parse(input) {
-        // 1. 健壮性处理：转小写，去掉首尾空格，用正则表达式分割（处理多个连续空格）
-        const tokens = input.trim().toLowerCase().split(/\s+/);
-        
-        if (tokens.length === 0 || !tokens[0]) return { success: false, msg: "请输入指令" };
+        if (!input || typeof input !== 'string') {
+            return { success: false, error: "输入为空" };
+        }
 
-        const action = tokens[0];
+        // 1. 预处理 (Preprocessing)
+        // 转小写 -> 去首尾空格 -> 将多个空格合并为一个
+        const cleanInput = input.toLowerCase().trim().replace(/\s+/g, ' ');
         
-        // 2. 意图识别
-        if (this.commands[action]) {
-            return this.executeCommand(this.commands[action], tokens.slice(1));
+        // 2. 分词 (Tokenization)
+        const tokens = cleanInput.split(' ');
+
+        if (tokens.length === 0) {
+            return { success: false, error: "无法识别指令" };
+        }
+
+        // 3. 语义分析 (Semantic Parsing)
+        try {
+            const command = this._analyzeTokens(tokens);
+            return { success: true, command: command };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
+
+    /**
+     * 内部方法：分析 Token 数组并提取意图
+     */
+    _analyzeTokens(tokens) {
+        // A. 识别操作类型 (Intent Recognition)
+        const actionToken = tokens[0];
+        let actionType = null;
+        let booleanOp = null;
+
+        if (this._isWordInList(actionToken, this.vocabulary.actions.create)) {
+            actionType = 'CREATE';
+        } else if (this._isWordInList(actionToken, this.vocabulary.actions.boolean)) {
+            actionType = 'BOOLEAN';
+            // 映射具体的布尔操作符
+            if (['subtract', 'cut', 'remove'].includes(actionToken)) booleanOp = 'SUBTRACT';
+            else if (['union', 'combine'].includes(actionToken)) booleanOp = 'UNION';
+            else if (['intersect'].includes(actionToken)) booleanOp = 'INTERSECT';
         } else {
-            return { success: false, msg: `无法识别指令: "${action}"` };
+            throw new Error(`无法识别的动词: "${actionToken}" (支持 add, subtract, union, intersect 等)`);
         }
-    }
 
-    executeCommand(opType, params) {
-        // 3. 实体提取：解析 shape, radius, at 等参数
-        const data = this.extractParameters(params);
-        if (!data.shape) return { success: false, msg: "未指定形状 (box 或 sphere)" };
-
-        // 步骤 A: 创建新几何体
-        let newNode;
-        if (data.shape === 'box') {
-            newNode = ProjectData.addBox();
-            // 如果有 size 参数，更新 params (这里简化处理，box默认size在addBox里定死了，作为演示先不动)
-        } else if (data.shape === 'sphere') {
-            newNode = ProjectData.addSphere();
-            // 如果解析到了 radius，更新它
-            if (data.radius !== null) {
-                newNode.params.radius = data.radius;
+        // B. 识别几何体形状 (Entity Extraction)
+        let geometry = null;
+        for (const token of tokens) {
+            if (this._isWordInList(token, this.vocabulary.shapes.box)) {
+                geometry = 'box';
+                break;
+            } else if (this._isWordInList(token, this.vocabulary.shapes.sphere)) {
+                geometry = 'sphere';
+                break;
             }
         }
-
-        // 步骤 B: 处理位置变换 (at x y z)
-        if (data.position) {
-            const mat = new THREE.Matrix4().makeTranslation(
-                data.position.x, data.position.y, data.position.z
-            );
-            newNode.transform = mat.toArray();
-        }
-
-        // 步骤 C: 根据操作类型决定下一步
-        let msg = `已创建 ${data.shape}`;
         
-        if (opType !== 'CREATE') {
-            // 如果是布尔运算（subtract/union等），需要找一个"目标"来操作
-            // 我们默认选取上一个生成的根节点作为操作对象
-            const roots = [];
-            ProjectData.nodes.forEach(n => { if (n.isRoot && n.id !== newNode.id) roots.push(n); });
-            
-            if (roots.length > 0) {
-                const targetNode = roots[roots.length - 1]; // 取最后一个
-                const resultNode = ProjectData.applyOperation(targetNode.id, newNode.id, opType);
-                msg += ` 并与 ${targetNode.name} 进行了 ${opType} 运算`;
-            } else {
-                msg += ` (但在场景中没找到可以进行 ${opType} 的对象)`;
+        if (!geometry) {
+            throw new Error("未找到几何体类型 (box 或 sphere)");
+        }
+
+        // C. 提取参数 (Parameter Extraction)
+        // 默认参数
+        let params = geometry === 'box' 
+            ? { width: 1, height: 1, depth: 1 } 
+            : { radius: 1 };
+        
+        // 默认位置
+        let position = { x: 0, y: 0, z: 0 };
+
+        // 遍历 Token 寻找关键词
+        for (let i = 0; i < tokens.length; i++) {
+            const token = tokens[i];
+
+            // C1. 解析位置 (at x y z)
+            if (this._isWordInList(token, this.vocabulary.keywords.position)) {
+                if (i + 3 < tokens.length) {
+                    position.x = parseFloat(tokens[i+1]) || 0;
+                    position.y = parseFloat(tokens[i+2]) || 0;
+                    position.z = parseFloat(tokens[i+3]) || 0;
+                    i += 3; // 跳过已读取的参数
+                }
+            }
+
+            // C2. 解析 Sphere 半径 (radius x)
+            if (geometry === 'sphere' && this._isWordInList(token, this.vocabulary.keywords.radius)) {
+                if (i + 1 < tokens.length) {
+                    params.radius = parseFloat(tokens[i+1]) || 1;
+                    i += 1;
+                }
+            }
+
+            // C3. 解析 Box 尺寸 (size w h d) 或 (size s)
+            if (geometry === 'box' && this._isWordInList(token, this.vocabulary.keywords.size)) {
+                // 简单处理：尝试读取后1个或3个数字
+                const next1 = parseFloat(tokens[i+1]);
+                const next2 = parseFloat(tokens[i+2]);
+                const next3 = parseFloat(tokens[i+3]);
+
+                if (!isNaN(next1) && !isNaN(next2) && !isNaN(next3)) {
+                    // size 1 2 3
+                    params.width = next1;
+                    params.height = next2;
+                    params.depth = next3;
+                    i += 3;
+                } else if (!isNaN(next1)) {
+                    // size 1 (立方体)
+                    params.width = next1;
+                    params.height = next1;
+                    params.depth = next1;
+                    i += 1;
+                }
             }
         }
 
-        // 4. 触发更新
-        ProjectData.saveState();
-        return { success: true, msg: msg };
-    }
-
-    // --- 核心：参数提取器 ---
-    extractParameters(tokens) {
+        // 组装最终对象
         const result = {
-            shape: null,
-            radius: null,
-            position: null
+            type: actionType,
+            geometry: geometry,
+            params: params,
+            position: position
         };
 
-        for (let i = 0; i < tokens.length; i++) {
-            const t = tokens[i];
-
-            // 识别形状
-            if (t === 'box' || t === 'cube') result.shape = 'box';
-            if (t === 'sphere' || t === 'ball') result.shape = 'sphere';
-
-            // 识别 radius
-            if (t === 'radius' && tokens[i+1]) {
-                result.radius = parseFloat(tokens[i+1]);
-            }
-
-            // 识别 at (位置)
-            if (t === 'at' && tokens[i+1] && tokens[i+2] && tokens[i+3]) {
-                result.position = {
-                    x: parseFloat(tokens[i+1]),
-                    y: parseFloat(tokens[i+2]),
-                    z: parseFloat(tokens[i+3])
-                };
-            }
+        if (actionType === 'BOOLEAN') {
+            result.operation = booleanOp;
         }
+
         return result;
+    }
+
+    /**
+     * 辅助函数：检查单词是否在列表中（模糊匹配）
+     */
+    _isWordInList(word, list) {
+        return list.includes(word);
     }
 }

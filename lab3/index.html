@@ -1,65 +1,79 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lab 3: 智能 CAD 原型</title>
-    <link rel="stylesheet" href="./style.css">
+    <title>CSG建模编辑器 - 实验二</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.148.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.148.0/examples/jsm/",
+                "three-mesh-bvh": "https://unpkg.com/three-mesh-bvh@0.5.23/build/index.module.js",
+                "three-bvh-csg": "https://unpkg.com/three-bvh-csg@0.0.7/build/index.module.js"
+            }
+        }
+    </script>
 </head>
 <body>
-    <div id="app">
-        <div id="canvas-container">
+    <div class="container">
+        <div class="canvas-container">
             <canvas id="threeCanvas"></canvas>
         </div>
+        
+        <div class="control-panel">
+           <div class="button-section" style="background: #e3f2fd; border: 1px solid #2196f3;">
+           <h3 style="color: #1565c0;">🤖 AI 命令驱动</h3>
+           <input type="text" id="aiInput" placeholder="输入指令 (如: add box)" 
+               style="width: 100%; padding: 8px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 4px;">
+        <button id="aiExecuteBtn" style="background-color: #1565c0;">执行指令</button>
+        <div id="aiFeedback" style="font-size: 12px; color: #666; margin-top: 5px; min-height: 1.2em;"></div>
+    </div>
 
-        <div id="ui-panel">
-            <h2>🛠️ 智能建模控制台</h2>
-            
-            <div class="panel-section">
-                <h3>基础操作</h3>
-                <div class="toolbar">
-                    <button id="addBoxBtn">➕ 立方体</button>
-                    <button id="addSphereBtn">➕ 球体</button>
+            <div class="button-section">
+                <h3>基本操作</h3>
+                <button id="addBoxBtn">添加立方体</button>
+                <button id="addSphereBtn">添加球体</button>
+                <div class="boolean-operations">
+                    <h4>布尔运算 (需选中两个节点)</h4>
+                    <button id="unionBtn">并集 (Union)</button>
+                    <button id="subtractBtn">差集 (Subtract)</button>
+                    <button id="intersectBtn">交集 (Intersect)</button>
                 </div>
-                <div class="toolbar" style="margin-top: 10px;">
-                    <button id="unionBtn">∪ 并集</button>
-                    <button id="subtractBtn">− 差集</button>
-                    <button id="intersectBtn">∩ 交集</button>
+                
+                <div style="margin-top: 15px; border-top: 1px solid #ddd; padding-top: 10px;">
+                    <h4>文件操作</h4>
+                    <button id="exportBtn" style="background-color: #ff9800;">导出 JSON</button>
+                    <button id="importBtn" style="background-color: #ff9800;">导入 JSON</button>
+                    <input type="file" id="fileInput" style="display: none;" accept=".json">
                 </div>
-            </div>
-
-            <div class="panel-section">
-                <h3>💬 AI 指令输入</h3>
-                <div class="command-area">
-                    <input type="text" id="commandInput" 
-                           placeholder="输入指令 (例如: subtract sphere radius 0.8)">
-                    <div id="statusInfo" style="color: #888;">等待指令...</div>
-                </div>
-                <p class="hint">尝试输入: <i>add box</i> 或 <i>cut sphere radius 0.6</i></p>
-            </div>
-
-            <div class="panel-section">
-                <h3>历史记录</h3>
-                <div class="history-controls">
-                    <button id="playBtn">▶ 播放过程</button>
-                    <span id="stepLabel">0/0</span>
-                </div>
-                <input type="range" id="historySlider" min="0" max="0" value="0" step="1">
             </div>
             
-            <div class="panel-section" style="flex: 1; overflow: auto;">
-                <h3>CSG 结构树</h3>
+            <!-- 动画回放区域 -->
+            <div class="status-section" style="border-top: 1px solid #ddd; padding-top: 10px;">
+                <h3>建模过程回放 (加分项)</h3>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <button id="playBtn" style="width: 40px; background: #2196F3;">▶</button>
+                    <input type="range" id="historySlider" min="0" max="0" value="0" style="flex: 1;">
+                    <span id="stepLabel" style="font-size: 12px; width: 40px; text-align: right;">0/0</span>
+                </div>
+            </div>
+            
+            <div class="status-section">
+                <h3>状态信息</h3>
+                <div id="statusInfo">未选中任何对象</div>
+            </div>
+            
+            <div class="tree-section">
+                <h3>CSG操作历史树</h3>
                 <div id="csgTreeView"></div>
-            </div>
-
-            <div class="panel-section">
-                <button id="exportBtn">💾 导出 JSON</button>
-                <button id="importBtn">📂 导入 JSON</button>
-                <input type="file" id="fileInput" accept=".json" style="display: none;">
             </div>
         </div>
     </div>
 
+    <!-- 引用路径依然是 ./js/main.js -->
     <script type="module" src="./js/main.js"></script>
 </body>
 </html>

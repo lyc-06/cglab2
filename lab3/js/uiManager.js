@@ -1,9 +1,11 @@
 // js/uiManager.js
-// 路径修正：直接引用同级文件
+import * as THREE from 'three';
 import ProjectData from './projectData.js';
+import CommandParser from './CommandParser.js'; // 1. 引入解析器
 
 export default class UIManager {
     constructor() {
+        this.parser = new CommandParser(); // 2. 实例化解析器
         this.isPlaying = false;
         this.playInterval = null;
         this.init();
@@ -12,10 +14,22 @@ export default class UIManager {
     init() {
         this.updateTreeView();
         this.bindEvents();
-        this.saveHistoryState(); 
+        // 初始化时不需要保存，由 main.js 控制
     }
     
     bindEvents() {
+        // === 3. 绑定 AI 指令事件 ===
+        const aiBtn = document.getElementById('aiExecuteBtn');
+        const aiInput = document.getElementById('aiInput');
+        if (aiBtn && aiInput) {
+            aiBtn.onclick = () => this.handleAICommand();
+            // 允许按回车键执行
+            aiInput.onkeypress = (e) => {
+                if (e.key === 'Enter') this.handleAICommand();
+            };
+        }
+        // =========================
+
         document.getElementById('addBoxBtn').onclick = () => this.addPrimitive('box');
         document.getElementById('addSphereBtn').onclick = () => this.addPrimitive('sphere');
         
@@ -28,10 +42,104 @@ export default class UIManager {
         document.getElementById('fileInput').onchange = (e) => this.importJSON(e);
 
         const slider = document.getElementById('historySlider');
-        slider.oninput = (e) => this.onSliderChange(e.target.value);
+        if (slider) slider.oninput = (e) => this.onSliderChange(e.target.value);
         
-        document.getElementById('playBtn').onclick = () => this.togglePlay();
+        const playBtn = document.getElementById('playBtn');
+        if (playBtn) playBtn.onclick = () => this.togglePlay();
     }
+
+    // === 4. 核心：处理 AI 指令 ===
+    handleAICommand() {
+        const inputEl = document.getElementById('aiInput');
+        const feedbackEl = document.getElementById('aiFeedback');
+        const rawText = inputEl.value;
+
+        // 调用解析器
+        const result = this.parser.parse(rawText);
+
+        if (!result.success) {
+            feedbackEl.style.color = 'red';
+            feedbackEl.textContent = `❌ ${result.error}`;
+            return;
+        }
+
+        feedbackEl.style.color = 'green';
+        feedbackEl.textContent = `✅ 识别成功: ${result.command.type} ${result.command.geometry}`;
+        console.log("AI Command:", result.command);
+
+        // 执行解析后的命令
+        this.executeCommand(result.command);
+    }
+
+    executeCommand(cmd) {
+        // 情况 A: 创建新物体 (CREATE)
+        if (cmd.type === 'CREATE') {
+            // 1. 创建节点
+            let node;
+            if (cmd.geometry === 'box') {
+                node = ProjectData.addBox();
+                // 应用尺寸参数
+                node.params.width = cmd.params.width || 1;
+                node.params.height = cmd.params.height || 1;
+                node.params.depth = cmd.params.depth || 1;
+            } else {
+                node = ProjectData.addSphere();
+                // 应用半径参数
+                node.params.radius = cmd.params.radius || 1;
+            }
+
+            // 2. 应用位置 (修改 transform 矩阵)
+            // Three.js 矩阵操作：先重置，再设置位置
+            const matrix = new THREE.Matrix4();
+            matrix.setPosition(cmd.position.x, cmd.position.y, cmd.position.z);
+            node.transform = matrix.toArray();
+
+            // 3. 刷新并保存
+            this.refreshAll(true);
+        }
+        
+        // 情况 B: 布尔运算 (BOOLEAN)
+        else if (cmd.type === 'BOOLEAN') {
+            // 逻辑：用"当前选中的物体" 去操作 "这个新生成的物体"
+            const selected = ProjectData.getSelectedNodes();
+            
+            if (selected.length === 0) {
+                alert("AI 提示：请先在场景中选中一个物体作为基础，再执行布尔操作！");
+                return;
+            }
+            const baseNode = selected[0]; // 这是一个 Node 对象
+
+            // 1. 创建操作体 (Operand)
+            let operandNode;
+            if (cmd.geometry === 'box') {
+                operandNode = ProjectData.addBox();
+                operandNode.params.width = cmd.params.width || 1;
+                operandNode.params.height = cmd.params.height || 1;
+                operandNode.params.depth = cmd.params.depth || 1;
+            } else {
+                operandNode = ProjectData.addSphere();
+                operandNode.params.radius = cmd.params.radius || 1;
+            }
+
+            // 2. 设置操作体位置
+            const matrix = new THREE.Matrix4();
+            matrix.setPosition(cmd.position.x, cmd.position.y, cmd.position.z);
+            operandNode.transform = matrix.toArray();
+
+            // 3. 执行布尔运算 (Apply Operation)
+            // 注意：applyOperation 会自动把 operandNode 设为非根节点
+            ProjectData.applyOperation(baseNode.id, operandNode.id, cmd.operation);
+
+            // 4. 自动选中新生成的节点，方便连续操作
+            // (ProjectData 应该返回新节点，但目前的 applyOperation 返回 opNode)
+            // 我们重新获取选中状态会比较安全
+            ProjectData.selectedNodeIds.clear();
+            // ProjectData.selectNode(newNodeId); // 暂略，用户需手动选
+
+            this.refreshAll(true);
+        }
+    }
+    // ===========================
     
     saveHistoryState() {
         const index = ProjectData.saveState();
@@ -43,9 +151,13 @@ export default class UIManager {
         const label = document.getElementById('stepLabel');
         const max = ProjectData.historyStack.length - 1;
         
-        slider.max = max;
-        slider.value = index;
-        label.textContent = `${index}/${max}`;
+        if (slider) {
+            slider.max = max;
+            slider.value = index;
+        }
+        if (label) {
+            label.textContent = `${index}/${max}`;
+        }
     }
 
     onSliderChange(val) {
@@ -118,6 +230,7 @@ export default class UIManager {
     
     updateTreeView() {
         const container = document.getElementById('csgTreeView');
+        if (!container) return;
         container.innerHTML = '';
         
         const renderNode = (node, level) => {
@@ -141,8 +254,10 @@ export default class UIManager {
                     window.app.sceneManager.selectNodes(ProjectData.getSelectedNodes());
                 }
                 
-                document.getElementById('statusInfo').textContent = 
-                    `选中: ${ProjectData.getSelectedNodes().map(n=>n.name).join(', ')}`;
+                const status = document.getElementById('statusInfo');
+                if (status) {
+                    status.textContent = `选中: ${ProjectData.getSelectedNodes().map(n=>n.name).join(', ')}`;
+                }
             };
             
             container.appendChild(div);
