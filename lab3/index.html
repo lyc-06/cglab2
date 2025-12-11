@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSG建模编辑器 - 实验二</title>
+    <title>Smart CAD - Lab 3</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     
     <script type="importmap">
@@ -18,62 +19,84 @@
     </script>
 </head>
 <body>
-    <div class="container">
-        <div class="canvas-container">
+    <div class="app-container">
+        <div class="canvas-wrapper">
             <canvas id="threeCanvas"></canvas>
+            <div class="overlay-info">
+                <span id="fpsCounter">FPS: 60</span>
+            </div>
         </div>
         
-        <div class="control-panel">
-           <div class="button-section" style="background: #e3f2fd; border: 1px solid #2196f3;">
-           <h3 style="color: #1565c0;">🤖 AI 命令驱动</h3>
-           <input type="text" id="aiInput" placeholder="输入指令 (如: add box)" 
-               style="width: 100%; padding: 8px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 4px;">
-        <button id="aiExecuteBtn" style="background-color: #1565c0;">执行指令</button>
-        <div id="aiFeedback" style="font-size: 12px; color: #666; margin-top: 5px; min-height: 1.2em;"></div>
-    </div>
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fa-solid fa-shapes"></i> Smart CAD</h2>
+            </div>
 
-            <div class="button-section">
-                <h3>基本操作</h3>
-                <button id="addBoxBtn">添加立方体</button>
-                <button id="addSphereBtn">添加球体</button>
-                <div class="boolean-operations">
-                    <h4>布尔运算 (需选中两个节点)</h4>
-                    <button id="unionBtn">并集 (Union)</button>
-                    <button id="subtractBtn">差集 (Subtract)</button>
-                    <button id="intersectBtn">交集 (Intersect)</button>
-                </div>
+            <div class="scroll-content">
+                <section class="panel-section ai-section">
+                    <h3><i class="fa-solid fa-wand-magic-sparkles"></i> AI Command</h3>
+                    <div class="input-group">
+                        <input type="text" id="aiInput" placeholder="Try 'add box' or 'cut sphere'...">
+                        <button id="aiExecuteBtn" class="btn-icon"><i class="fa-solid fa-arrow-right"></i></button>
+                    </div>
+                    <div id="aiFeedback" class="feedback-text">Ready for instructions...</div>
+                </section>
+
+                <section class="panel-section">
+                    <h3 class="section-title">Primitives</h3>
+                    <div class="grid-2">
+                        <button id="addBoxBtn" class="btn btn-secondary">
+                            <i class="fa-solid fa-cube"></i> Box
+                        </button>
+                        <button id="addSphereBtn" class="btn btn-secondary">
+                            <i class="fa-solid fa-circle"></i> Sphere
+                        </button>
+                    </div>
+                </section>
+
+                <section class="panel-section">
+                    <h3 class="section-title">Boolean Ops</h3>
+                    <div class="btn-stack">
+                        <button id="unionBtn" class="btn btn-primary">
+                            <i class="fa-solid fa-object-group"></i> Union
+                        </button>
+                        <button id="subtractBtn" class="btn btn-primary">
+                            <i class="fa-solid fa-object-ungroup"></i> Subtract
+                        </button>
+                        <button id="intersectBtn" class="btn btn-primary">
+                            <i class="fa-solid fa-layer-group"></i> Intersect
+                        </button>
+                    </div>
+                </section>
                 
-                <div style="margin-top: 15px; border-top: 1px solid #ddd; padding-top: 10px;">
-                    <h4>文件操作</h4>
-                    <button id="exportBtn" style="background-color: #ff9800;">导出 JSON</button>
-                    <button id="importBtn" style="background-color: #ff9800;">导入 JSON</button>
+                <section class="panel-section">
+                    <h3 class="section-title">Timeline</h3>
+                    <div class="timeline-control">
+                        <button id="playBtn" class="btn-circle"><i class="fa-solid fa-play"></i></button>
+                        <div class="slider-wrapper">
+                            <input type="range" id="historySlider" min="0" max="0" value="0">
+                            <span id="stepLabel">0/0</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel-section flex-grow">
+                    <h3 class="section-title">Hierarchy</h3>
+                    <div id="statusInfo" class="status-bar">No selection</div>
+                    <div id="csgTreeView" class="tree-view"></div>
+                </section>
+
+                <section class="panel-section footer-actions">
+                    <div class="grid-2">
+                        <button id="exportBtn" class="btn btn-ghost"><i class="fa-solid fa-download"></i> Export</button>
+                        <button id="importBtn" class="btn btn-ghost"><i class="fa-solid fa-upload"></i> Import</button>
+                    </div>
                     <input type="file" id="fileInput" style="display: none;" accept=".json">
-                </div>
+                </section>
             </div>
-            
-            <!-- 动画回放区域 -->
-            <div class="status-section" style="border-top: 1px solid #ddd; padding-top: 10px;">
-                <h3>建模过程回放 (加分项)</h3>
-                <div style="display: flex; align-items: center; gap: 5px;">
-                    <button id="playBtn" style="width: 40px; background: #2196F3;">▶</button>
-                    <input type="range" id="historySlider" min="0" max="0" value="0" style="flex: 1;">
-                    <span id="stepLabel" style="font-size: 12px; width: 40px; text-align: right;">0/0</span>
-                </div>
-            </div>
-            
-            <div class="status-section">
-                <h3>状态信息</h3>
-                <div id="statusInfo">未选中任何对象</div>
-            </div>
-            
-            <div class="tree-section">
-                <h3>CSG操作历史树</h3>
-                <div id="csgTreeView"></div>
-            </div>
-        </div>
+        </aside>
     </div>
 
-    <!-- 引用路径依然是 ./js/main.js -->
     <script type="module" src="./js/main.js"></script>
 </body>
 </html>

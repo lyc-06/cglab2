@@ -236,14 +236,28 @@ export default class UIManager {
         const renderNode = (node, level) => {
             const div = document.createElement('div');
             div.className = 'tree-node';
-            div.style.marginLeft = (level * 20) + 'px';
+            div.style.marginLeft = (level * 16) + 'px'; // 稍微减小缩进
             
             if (ProjectData.selectedNodeIds.has(node.id)) {
                 div.classList.add('selected');
             }
             
-            let icon = node.type === 'primitive' ? (node.geometry === 'box' ? '⬜' : '⭕') : '🔧';
-            div.innerHTML = `${icon} ${node.name || node.id}`;
+            // === 修改开始：使用 FontAwesome 图标替代 Emoji ===
+            let iconHtml = '';
+            if (node.type === 'primitive') {
+                if (node.geometry === 'box') {
+                    iconHtml = '<i class="fa-solid fa-cube"></i>'; // 立方体图标
+                } else {
+                    iconHtml = '<i class="fa-solid fa-circle"></i>'; // 球体图标
+                }
+            } else {
+                // 操作节点图标 (Union/Subtract/Intersect)
+                iconHtml = '<i class="fa-solid fa-layer-group"></i>'; 
+            }
+            
+            // 使用 innerHTML 插入图标
+            div.innerHTML = `${iconHtml} <span>${node.name || node.id}</span>`;
+            // === 修改结束 ===
             
             div.onclick = (e) => {
                 e.stopPropagation();
@@ -256,7 +270,9 @@ export default class UIManager {
                 
                 const status = document.getElementById('statusInfo');
                 if (status) {
-                    status.textContent = `选中: ${ProjectData.getSelectedNodes().map(n=>n.name).join(', ')}`;
+                    // 状态栏也去除 Emoji，只显示名字
+                    const names = ProjectData.getSelectedNodes().map(n=>n.name).join(', ');
+                    status.textContent = names ? `Selected: ${names}` : 'No selection';
                 }
             };
             
