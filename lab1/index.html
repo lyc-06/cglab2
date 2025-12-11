@@ -3,21 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>实验1：Three.js CSG 布尔运算</title>
+    <title>Precision Bearing - Lab 1</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     
     <script type="importmap">
-    {
-        "imports": {
-            "three": "./js/three.module.js",
-            "three-mesh-bvh": "./js/three-mesh-bvh.js",
-            "three-bvh-csg": "./js/three-bvh-csg.js"
+        {
+            "imports": {
+                "three": "./js/three.module.js",
+                "three-mesh-bvh": "./js/three-mesh-bvh.js",
+                "three-bvh-csg": "./js/three-bvh-csg.js"
+            }
         }
-    }
-</script>
+    </script>
 </head>
 <body>
-    <div id="canvas-container"></div>
+    <div class="app-container">
+        <div class="canvas-wrapper">
+            <canvas id="glCanvas"></canvas>
+            <div class="overlay-info">
+                <span><i class="fa-solid fa-gear"></i> CSG Procedural Bearing</span>
+            </div>
+        </div>
+        
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fa-solid fa-shapes"></i> Lab 1: CSG</h2>
+            </div>
+
+            <div class="scroll-content">
+                <div class="info-card">
+                    <h4><i class="fa-solid fa-circle-info"></i> Project Goal</h4>
+                    <p>Use Constructive Solid Geometry (CSG) to procedurally model a mechanical bearing.</p>
+                </div>
+
+                <section class="panel-section">
+                    <h3 class="section-title">Visualization</h3>
+                    <div class="grid-2">
+                        <button id="btn-wireframe" class="btn btn-secondary">
+                            <i class="fa-solid fa-border-all"></i> Wireframe
+                        </button>
+                        <button id="btn-rotate" class="btn btn-primary">
+                            <i class="fa-solid fa-arrows-rotate"></i> Auto Rotate
+                        </button>
+                    </div>
+                </section>
+
+                <section class="panel-section">
+                    <h3 class="section-title">Construction Steps</h3>
+                    <div class="btn-stack">
+                        <button id="step-1" class="btn btn-ghost active">
+                            <i class="fa-regular fa-circle"></i> 1. Raw Cylinders
+                        </button>
+                        <button id="step-2" class="btn btn-ghost">
+                            <i class="fa-solid fa-circle-minus"></i> 2. Subtract Bore
+                        </button>
+                        <button id="step-3" class="btn btn-ghost">
+                            <i class="fa-solid fa-ring"></i> 3. Cut Grooves (CSG)
+                        </button>
+                        <button id="step-4" class="btn btn-ghost">
+                            <i class="fa-solid fa-bowling-ball"></i> 4. Add Balls & Final
+                        </button>
+                    </div>
+                </section>
+                
+                <section class="panel-section flex-grow">
+                    <h3 class="section-title">Details</h3>
+                    <div class="status-bar">
+                        <i class="fa-solid fa-microchip"></i> 
+                        <span id="status-text">Rendering Final Model</span>
+                    </div>
+                    <div class="param-list">
+                        <div class="param-row">
+                            <span>Outer Radius</span>
+                            <span>3.00 mm</span>
+                        </div>
+                        <div class="param-row">
+                            <span>Inner Radius</span>
+                            <span>1.50 mm</span>
+                        </div>
+                        <div class="param-row">
+                            <span>Balls</span>
+                            <span>8 units</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </aside>
+    </div>
 
     <script type="module" src="./js/main.js"></script>
 </body>
